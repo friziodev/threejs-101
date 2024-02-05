@@ -37,8 +37,10 @@ document.body.appendChild(renderer.domElement)
 
 // Sposto indietro la camera
 camera.position.z = 6
-// mesh.rotation.y = Math.PI / 4
-// mesh.rotation.x = Math.PI / 4
+
+// Applico una rotazione alla mesh
+mesh.rotation.y = Math.PI / 4
+mesh.rotation.x = Math.PI / 4
 
 // Renderizzo la scena dalla camera
 renderer.render(scene, camera)
