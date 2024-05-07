@@ -1,61 +1,208 @@
 import './style.css'
 import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
+import fontSrc from 'three/examples/fonts/helvetiker_bold.typeface.json?url'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
+import { Vector3 } from 'three/src/math/Vector3'
 
-// Creo la scena
+/**
+ * Scene
+ */
 const scene = new THREE.Scene()
 
-// Creo un cubo verde
-const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+let font
 
-// Creo la mesh
-const mesh = new THREE.Mesh(geometry, material)
+/**
+ * Cube
+ */
+// const material = new THREE.MeshNormalMaterial({
+// 	wireframe: true,
+// })
 
-// Aggiungo il cubo alla scena
-scene.add(mesh)
+// const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
 
-// imposto temporaneamente le dimensione del render
-const tmp = {
-  width: 1024,
-  height: 720,
+// const mesh = new THREE.Mesh(geometry, material)
+// // scene.add(mesh)
+
+// mesh.add(new THREE.AxesHelper(2))
+// mesh.rotation.x = 2.3
+// mesh.rotation.y = 0.78
+
+/**
+ * Axes Helper
+ */
+const axesHelper = new THREE.AxesHelper(6)
+scene.add(axesHelper)
+
+/**
+ * Grid helper
+ */
+const gridHelper = new THREE.GridHelper(6, 6)
+gridHelper.rotation.x = Math.PI * 0.5
+gridHelper.position.set(3, 3, -0.01)
+scene.add(gridHelper)
+
+/**
+ * render sizes
+ */
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight,
 }
+/**
+ * Camera
+ */
+const fov = 60
+const camera = new THREE.PerspectiveCamera(fov, sizes.width / sizes.height, 0.1)
 
-// Creo la camera prospettica
-const camera = new THREE.PerspectiveCamera(
-  75,
-  tmp.width / tmp.height,
-  //0.1,
-  //10
-)
+camera.position.set(3, 3, 6)
 
-// Creo il renderer
-const renderer = new THREE.WebGLRenderer()
-renderer.setSize(tmp.width, tmp.height)
+/**
+ * renderer
+ */
+const renderer = new THREE.WebGLRenderer({
+  antialias: window.devicePixelRatio < 2,
+  logarithmicDepthBuffer: true,
+})
+renderer.setSize(sizes.width, sizes.height)
 
-// Append la canvas al body del document
+const pixelRatio = Math.min(window.devicePixelRatio, 2)
+renderer.setPixelRatio(pixelRatio)
 document.body.appendChild(renderer.domElement)
 
-// Sposto indietro la camera
-camera.position.z = 6
+/**
+ * OrbitControls
+ */
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.target.set(3, 3, 3)
 
-// Applico una rotazione alla mesh
-//mesh.rotation.y = Math.PI / 4
-// mesh.rotation.x = Math.PI / 4
-
-// Renderizzo la scena dalla camera
-//renderer.render(scene, camera)
-
-// Crea una animazione tramite frame loop
+/**
+ * frame loop
+ */
 function tic() {
-  // Renderizzo la scena dalla camera
+  controls.update()
+
   renderer.render(scene, camera)
-  // Applico una rotazione alla mesh
-  mesh.rotation.x += 0.01
-  mesh.rotation.y += 0.01
-  // invochiamo la funzione tic al prossimo frame
+
   requestAnimationFrame(tic)
 }
 
-// Start frame loop
 requestAnimationFrame(tic)
 
+window.addEventListener('resize', onResize)
+
+function onResize() {
+  sizes.width = window.innerWidth
+  sizes.height = window.innerHeight
+
+  camera.aspect = sizes.width / sizes.height
+  camera.updateProjectionMatrix()
+
+  renderer.setSize(sizes.width, sizes.height)
+
+  const pixelRatio = Math.min(window.devicePixelRatio, 2)
+  renderer.setPixelRatio(pixelRatio)
+}
+
+/**
+ * Create the ArrowHelper for the vector
+ * @param {String} name
+ * @param {Vector3} v
+ * @param {Vector3} origin
+ * @returns
+ */
+function createVector(
+  name,
+  v = new THREE.Vector3(),
+  origin = new THREE.Vector3()
+) {
+  const color = new THREE.Color(Math.random(), Math.random(), Math.random())
+
+  const h = new THREE.ArrowHelper(
+    v.clone().normalize(),
+    origin.clone(),
+    v.length(),
+    color.getHex(),
+    0.3,
+    0.2
+  )
+
+  const textPos = v.clone().multiplyScalar(0.65).add(origin)
+
+  createText(name, textPos, color)
+  scene.add(h)
+
+  return h
+}
+
+/**
+ * Load font
+ */
+const loader = new FontLoader()
+loader.load(fontSrc, function (res) {
+  font = res
+
+  init()
+})
+
+/**
+ * create Label for the ArrowHelper
+ * @param {String} text
+ * @param {Vector3} position
+ * @param {THREE.Color} color
+ */
+function createText(text, position, color) {
+  const geometry = new TextGeometry(text, {
+    font,
+    size: 0.3,
+    height: 0.05,
+  })
+
+  geometry.computeBoundingBox()
+
+  let mesh = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({
+      color: color.getHex(),
+    })
+  )
+
+  console.log(geometry.boundingBox)
+
+  mesh.position.copy(position)
+
+  mesh.position.y += 0.2
+  mesh.position.x -=
+    (geometry.boundingBox.max.x - geometry.boundingBox.min.x) / 2
+
+  scene.add(mesh)
+}
+
+function init() {
+  const positionA = new THREE.Vector3(3, 1, 0)
+  const s = new THREE.Vector3(1, 2, 0)
+
+  s.multiplyScalar(2)
+
+  console.log(s.length())
+
+  createVector('A', positionA)
+  createVector('s', s)
+
+  const positionB = positionA.clone().add(s)
+
+  createVector('B', positionB)
+
+  // const normalizedB = positionB.multiplyScalar(1 / positionB.length())
+  const normalizedB = positionB.normalize()
+  createVector('nB', normalizedB)
+
+  // s.negate()
+
+  // createVector('-s', s)
+
+  // const positionC = positionA.clone().add(s)
+  // createVector('C', positionC)
+}
